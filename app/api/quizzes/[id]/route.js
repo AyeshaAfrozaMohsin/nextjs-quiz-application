@@ -53,6 +53,9 @@ export async function GET(request, { params }) {
     const page = searchParams.get("page") || 1;
     const pageSize = searchParams.get("pageSize") || 5;
 
+    console.log("got page :", page);
+    console.log("got pageSize :", pageSize);
+
     await connectMongoDB();
 
     // Find the quiz by id

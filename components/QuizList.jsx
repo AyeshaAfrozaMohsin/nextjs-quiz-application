@@ -15,23 +15,29 @@ const getQuizzes = async () => {
       return res.json();
     }
   } catch (err) {
-    // <div className="font-bold text-red-600 text-center">
-    //   An error has occured.
-    // </div>
-    console.log("an error has occured.");
+    console.log("an error has occurred.");
+    throw err; // Re-throw the error to handle it in the parent component if needed
   }
 };
 
 export default function QuizList() {
   const [quizzes, setQuizzes] = useState([]);
+  const [loading, setLoading] = useState(true); // State to track loading status
 
   useEffect(() => {
     fetchQuizzes();
-  }, [quizzes]);
+  }, []);
 
   const fetchQuizzes = async () => {
-    const { quizzes } = await getQuizzes();
-    setQuizzes(quizzes);
+    setLoading(true); // Set loading to true when fetching starts
+    try {
+      const { quizzes } = await getQuizzes();
+      setQuizzes(quizzes);
+    } catch (error) {
+      // Handle error if needed
+    } finally {
+      setLoading(false); // Set loading to false when fetching completes (either success or error)
+    }
   };
 
   const handleDelete = async (e, id) => {
@@ -42,12 +48,9 @@ export default function QuizList() {
       });
 
       if (res.ok) {
-        // Successful deletion
         alert("Quiz deleted successfully!");
-        // Refresh the list of quizzes
         fetchQuizzes();
       } else {
-        // If the deletion fails
         alert("Failed to delete quiz.");
       }
     } catch (error) {
@@ -58,27 +61,29 @@ export default function QuizList() {
 
   return (
     <>
-      {quizzes.map((q) => (
-        <div
-          key={q._id}
-          className="p-4 border border-slate-300 my-3 flex justify-between gap-5"
-        >
-          <Link href={`/GiveQuiz/${q._id}`} className="bg-gray-200 flex-1">
-            <div>
-              <h2>{q.title}</h2>
-              <h2>{q.description}</h2>
+      {loading && <div>Loading...</div>} {/* Render loading text if loading is true */}
+      {!loading && // Render quizzes if not loading
+        quizzes.map((q) => (
+          <div
+            key={q._id}
+            className="p-4 border border-slate-300 my-3 flex justify-between gap-5"
+          >
+            <Link href={`/GiveQuiz/${q._id}`} className="bg-gray-200 flex-1">
+              <div>
+                <h2>{q.title}</h2>
+                <h2>{q.description}</h2>
+              </div>
+            </Link>
+            <div className="flex gap-2 items-start">
+              <button
+                className="text-red-400"
+                onClick={(e) => handleDelete(e, q._id)}
+              >
+                <HiOutlineTrash size={24} />
+              </button>
             </div>
-          </Link>
-          <div className="flex gap-2 items-start">
-            <button
-              className="text-red-400"
-              onClick={(e) => handleDelete(e, q._id)}
-            >
-              <HiOutlineTrash size={24} />
-            </button>
           </div>
-        </div>
-      ))}
+        ))}
     </>
   );
 }
