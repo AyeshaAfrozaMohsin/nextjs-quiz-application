@@ -61,16 +61,16 @@ export default function QuizList() {
 
   return (
     <>
-      {loading && <div>Loading...</div>} {/* Render loading text if loading is true */}
+      {loading && <h1 className="text-3xl font-bold mb-4">Loading...</h1>}{" "}
       {!loading && // Render quizzes if not loading
         quizzes.map((q) => (
           <div
             key={q._id}
             className="p-4 border border-slate-300 my-3 flex justify-between gap-5"
           >
-            <Link href={`/GiveQuiz/${q._id}`} className="bg-gray-200 flex-1">
+            <Link href={`/GiveQuiz/${q._id}`} className="flex-1">
               <div>
-                <h2>{q.title}</h2>
+                <h2 className="font-bold text-xl">{q.title}</h2>
                 <h2>{q.description}</h2>
               </div>
             </Link>
