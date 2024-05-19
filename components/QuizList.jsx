@@ -59,14 +59,23 @@ export default function QuizList() {
     }
   };
 
+  const getQuizColour = (qIndex)=>{
+    if(quizzes[qIndex].bestScore){
+      return 'bg-blue-50'
+    }else{
+      return 'bg-gray-200'
+
+    }
+  }
+
   return (
     <>
       {loading && <h1 className="text-3xl font-bold mb-4">Loading...</h1>}{" "}
       {!loading && // Render quizzes if not loading
-        quizzes.map((q) => (
+        quizzes.map((q, qIndex) => (
           <div
             key={q._id}
-            className="p-4 border border-slate-300 my-3 flex justify-between gap-5"
+            className={`p-4 border border-slate-300 my-3 flex justify-between gap-5 ${getQuizColour(qIndex)}`}
           >
             <Link href={`/GiveQuiz/${q._id}`} className="flex-1">
               <div>
