@@ -5,7 +5,8 @@ const QuizSchema = new Schema(
     title: String,
     description: String,
     questions: [{ type: Schema.Types.ObjectId, ref: 'Question' }],
-    bestTime: { type: Number, default: null } 
+    timeTaken: { type: Number, default: null },
+    bestScore : { type: Number, default: 0 } 
   },
   {
     timestamps: true,

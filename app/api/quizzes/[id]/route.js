@@ -17,41 +17,41 @@ import { NextResponse } from "next/server";
 //   }
 // }
 
-export async function PUT(request, { params }) {
-  try {
-    const { id } = params;
-    const { question, options } = request.json(); // Extract question and options from request body
-    await connectMongoDB();
+// export async function PUT(request, { params }) {
+//   try {
+//     const { id } = params;
+//     const { question, options } = request.json(); // Extract question and options from request body
+//     await connectMongoDB();
 
-    // Update the quiz document by pushing the new question and options into the questions array
-    const updatedQuiz = await Quiz.findByIdAndUpdate(
-      id,
-      { $push: { questions: { question, options } } },
-      { new: true }
-    );
+//     // Update the quiz document by pushing the new question and options into the questions array
+//     const updatedQuiz = await Quiz.findByIdAndUpdate(
+//       id,
+//       { $push: { questions: { question, options } } },
+//       { new: true }
+//     );
 
-    if (!updatedQuiz) {
-      return NextResponse.json({ error: "Quiz not found." }, { status: 404 });
-    }
+//     if (!updatedQuiz) {
+//       return NextResponse.json({ error: "Quiz not found." }, { status: 404 });
+//     }
 
-    return NextResponse.json(
-      { message: "Question added to quiz.", quiz: updatedQuiz },
-      { status: 200 }
-    );
-  } catch (error) {
-    // Handle any errors that occur during MongoDB connection or quiz update
-    console.error("Error:", error);
-    return NextResponse.json({ error: "An error occurred." }, { status: 500 });
-  }
-}
+//     return NextResponse.json(
+//       { message: "Question added to quiz.", quiz: updatedQuiz },
+//       { status: 200 }
+//     );
+//   } catch (error) {
+//     // Handle any errors that occur during MongoDB connection or quiz update
+//     console.error("Error:", error);
+//     return NextResponse.json({ error: "An error occurred." }, { status: 500 });
+//   }
+// }
 
 export async function GET(request, { params }) {
   try {
     const { id } = params; // the _id of the quiz
     const url = new URL(request.url);
     const searchParams = url.searchParams;
-    const page = searchParams.get("page") || 1;
-    const pageSize = searchParams.get("pageSize") || 5;
+    const page = searchParams.get("page");
+    const pageSize = searchParams.get("pageSize");
 
     console.log("got page :", page);
     console.log("got pageSize :", pageSize);
@@ -68,6 +68,14 @@ export async function GET(request, { params }) {
     const totalQuestions = await Question.countDocuments({
       _id: { $in: quiz.questions },
     });
+
+    if (page === null) {
+      const questions = await Question.find({ _id: { $in: quiz.questions } });
+      return NextResponse.json(
+        { quiz, questions, totalQuestions, isMore: false },
+        { status: 200 }
+      );
+    }
 
     // Paginate the questions
     const questions = await Question.find({ _id: { $in: quiz.questions } })
@@ -105,8 +113,43 @@ export async function POST(request, { params }) {
       }
     }
 
+    let isBest = false;
+
+    if (quiz.bestScore < totalMarks) {
+      isBest = true;
+      await Quiz.updateOne(
+        { _id: id },
+        {
+          $set: {
+            bestScore: totalMarks,
+            bestTime: answers.timeTaken,
+          },
+        }
+      );
+    } else if (
+      quiz.bestScore == totalMarks &&
+      (quiz.bestTime ? quiz.bestTime : 99999) > answers.timeTaken
+    ) {
+      isBest = true;
+      await Quiz.updateOne(
+        { _id: id },
+        {
+          $set: {
+            bestTime: answers.timeTaken,
+          },
+        }
+      );
+    }
+
     return NextResponse.json(
-      { _id: id, totalMarks, totalQuestions: quiz.questions.length },
+      {
+        _id: id,
+        totalMarks,
+        totalQuestions: quiz.questions.length,
+        isBest,
+        bestScore: quiz.bestScore,
+        bestTime: quiz.bestTime,
+      },
       { status: 200 }
     );
   } catch (error) {

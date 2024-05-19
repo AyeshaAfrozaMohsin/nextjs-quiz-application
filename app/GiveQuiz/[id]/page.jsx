@@ -1,7 +1,10 @@
 "use client";
 import React, { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import Timer from "@/components/Timer";
 
 export default function GiveQuiz({ params: { id } }) {
+  const [elapsedTime, setElapsedTime] = useState(0);
   const [quizData, setQuizData] = useState({
     quiz: { title: "", description: "" },
     questions: [],
@@ -14,7 +17,13 @@ export default function GiveQuiz({ params: { id } }) {
   const [askedPrev, setAskedPrev] = useState(false);
   const [prevData, setPrevData] = useState(null);
   const [nextData, setNextData] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
+
+  const router = useRouter();
+
+  const handleTimeUpdate = (time) => {
+    setElapsedTime(time);
+  };
 
   const fetchDataCurrent = async () => {
     console.log("Fetching CURR:", page);
@@ -26,6 +35,7 @@ export default function GiveQuiz({ params: { id } }) {
       const data = await response.json();
       setQuizData(data);
       console.log("got data : ", data);
+      setLoading(false);
       if (data.isMore) {
         fetchDataNext();
       } else {
@@ -64,20 +74,10 @@ export default function GiveQuiz({ params: { id } }) {
     }
   };
 
-  // useEffect(() => {
-  //   console.log("Page: ", page);
-  //   console.log("Fetched Curr: ", quizData);
-  // }, [quizData]);
-  // useEffect(() => {
-  //   console.log("Fetched prev: ", [prevData]);
-  // }, [prevData]);
-  // useEffect(() => {
-  //   console.log("Fetched next: ", nextData);
-  // }, [nextData]);
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      console.log("Form submitted with elapsed time:", elapsedTime);
       console.log("Sending answers : ", answers);
 
       const response = await fetch(`http://localhost:3000/api/quizzes/${id}`, {
@@ -85,13 +85,21 @@ export default function GiveQuiz({ params: { id } }) {
         headers: {
           "Content-type": "application/json",
         },
-        body: JSON.stringify(answers),
+        body: JSON.stringify({ timeTaken: elapsedTime, ...answers }),
       });
-      const { totalMarks, totalQuestions } = await response.json();
+      const { totalMarks, totalQuestions, isBest, bestScore, bestTime } = await response.json();
       if (response.ok) {
         alert(`You got: ${totalMarks}/${totalQuestions}`);
+        localStorage.setItem("quizId", id);
+        localStorage.setItem("score", totalMarks);
+        localStorage.setItem("time", elapsedTime);
+        localStorage.setItem("isBest", isBest);
+        localStorage.setItem("bestScore", bestScore);
+        localStorage.setItem("bestTime", bestTime);
+        localStorage.setItem("quizAnswers", JSON.stringify(answers));
         setAnswers([]);
       }
+      router.push(`/Results/${id}`);
     } catch (error) {
       console.error("Error sending answers:", error);
       toast.error("Error submitting quiz");
@@ -134,72 +142,80 @@ export default function GiveQuiz({ params: { id } }) {
   }, []);
 
   return (
-    <div className="p-6">
-      <h1 className="text-3xl font-bold mb-4">Quiz</h1>
-      <h2 className="text-2xl font-bold mb-4">{quizData.quiz.title}</h2>
-      <h3 className="text-1xl font-bold mb-4">{quizData.quiz.description}</h3>
-
-      {quizData.questions.map((question, questionIndex) => (
-        <div key={question._id} className="mb-4">
-          <h4 className="font-bold">{question.question}</h4>
-          {question.options.map((option, optionIndex) => (
-            <div key={optionIndex} className="flex items-center">
-              <input
-                type="radio"
-                id={`option_${questionIndex}_${optionIndex}`}
-                name={`question_${questionIndex}`}
-                value={optionIndex}
-                onChange={() =>
-                  handleOptionSelection(questionIndex, optionIndex)
-                }
-              />
-              <label
-                htmlFor={`option_${questionIndex}_${optionIndex}`}
-                className="ml-2"
-              >
-                {option}
-              </label>
+    <>
+      {loading ? (
+        <h1 className="text-3xl font-bold mb-4">Loading...</h1>
+      ) : (
+        <div className="p-6">
+          <Timer onTimeUpdate={handleTimeUpdate} />
+          <h1 className="text-3xl font-bold mb-4">Quiz</h1>
+          <h2 className="text-2xl font-bold mb-4">{quizData.quiz.title}</h2>
+          <h3 className="text-1xl font-bold mb-4">
+            {quizData.quiz.description}
+          </h3>
+          {quizData.questions.map((question, questionIndex) => (
+            <div key={question._id} className="mb-4">
+              <h4 className="font-bold">{question.question}</h4>
+              {question.options.map((option, optionIndex) => (
+                <div key={optionIndex} className="flex items-center">
+                  <input
+                    type="radio"
+                    id={`option_${questionIndex}_${optionIndex}`}
+                    name={`question_${questionIndex}`}
+                    value={optionIndex}
+                    onChange={() =>
+                      handleOptionSelection(questionIndex, optionIndex)
+                    }
+                  />
+                  <label
+                    htmlFor={`option_${questionIndex}_${optionIndex}`}
+                    className="ml-2"
+                  >
+                    {option}
+                  </label>
+                </div>
+              ))}
             </div>
           ))}
+          <div className="mt-6">
+            <button
+              disabled={page === 1}
+              onClick={() => {
+                setAskedPrev(true);
+                setPage((prevPage) => prevPage - 1);
+              }}
+              className={`px-2 py-2 rounded-md ${
+                page === 1 ? "bg-gray-400" : "bg-blue-500 hover:bg-blue-600"
+              } text-white mr-2`}
+            >
+              Previous
+            </button>
+            <p>
+              {page}/{Math.ceil(quizData.totalQuestions / 5)}
+            </p>
+            <button
+              disabled={!quizData.isMore}
+              onClick={() => {
+                setAskedNext(true);
+                setPage((prevPage) => prevPage + 1);
+              }}
+              className={`px-2 py-2 rounded-md ${
+                !quizData.isMore
+                  ? "bg-gray-400"
+                  : "bg-blue-500 hover:bg-blue-600"
+              } text-white mr-2`}
+            >
+              Next
+            </button>
+          </div>
+          <button
+            onClick={(e) => handleSubmit(e)}
+            className="px-4 py-2 rounded-md bg-green-700 hover:bg-blue-600 text-white mt-4"
+          >
+            Submit
+          </button>
         </div>
-      ))}
-
-      <div className="mt-6">
-        <button
-          disabled={page === 1}
-          onClick={() => {
-            setAskedPrev(true);
-            setPage((prevPage) => prevPage - 1);
-          }}
-          className={`px-2 py-2 rounded-md ${
-            page === 1 ? "bg-gray-400" : "bg-blue-500 hover:bg-blue-600"
-          } text-white mr-2`}
-        >
-          Previous
-        </button>
-        <p>
-          {page}/{Math.ceil(quizData.totalQuestions / 5)}
-        </p>
-        <button
-          disabled={!quizData.isMore}
-          onClick={() => {
-            setAskedNext(true);
-            setPage((prevPage) => prevPage + 1);
-          }}
-          className={`px-2 py-2 rounded-md ${
-            !quizData.isMore ? "bg-gray-400" : "bg-blue-500 hover:bg-blue-600"
-          } text-white mr-2`}
-        >
-          Next
-        </button>
-      </div>
-
-      <button
-        onClick={(e) => handleSubmit(e)}
-        className="px-4 py-2 rounded-md bg-green-700 hover:bg-blue-600 text-white mt-4"
-      >
-        Submit
-      </button>
-    </div>
+      )}
+    </>
   );
 }
