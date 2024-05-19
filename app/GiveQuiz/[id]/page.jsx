@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Timer from "@/components/Timer";
+import QuizProgress from "@/components/QuizProgress";
 
 export default function GiveQuiz({ params: { id } }) {
   const [elapsedTime, setElapsedTime] = useState(0);
@@ -18,8 +19,11 @@ export default function GiveQuiz({ params: { id } }) {
   const [prevData, setPrevData] = useState(null);
   const [nextData, setNextData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [totalAnswered, setTotalAnswered] = useState(0);
 
   const router = useRouter();
+
+  const pageSize = 5;
 
   const handleTimeUpdate = (time) => {
     setElapsedTime(time);
@@ -29,7 +33,7 @@ export default function GiveQuiz({ params: { id } }) {
     console.log("Fetching CURR:", page);
     try {
       const response = await fetch(
-        `http://localhost:3000/api/quizzes/${id}?page=${page}&pageSize=5`,
+        `http://localhost:3000/api/quizzes/${id}?page=${page}&pageSize=${pageSize}`,
         { method: "GET" }
       );
       const data = await response.json();
@@ -49,7 +53,9 @@ export default function GiveQuiz({ params: { id } }) {
     console.log("Fetching PREVV:", page - 1);
     try {
       const response = await fetch(
-        `http://localhost:3000/api/quizzes/${id}?page=${page - 1}&pageSize=5`,
+        `http://localhost:3000/api/quizzes/${id}?page=${
+          page - 1
+        }&pageSize=${pageSize}`,
         { method: "GET" }
       );
       const data = await response.json();
@@ -63,7 +69,9 @@ export default function GiveQuiz({ params: { id } }) {
     console.log("Fetching NEXTT:", page + 1);
     try {
       const response = await fetch(
-        `http://localhost:3000/api/quizzes/${id}?page=${page + 1}&pageSize=5`,
+        `http://localhost:3000/api/quizzes/${id}?page=${
+          page + 1
+        }&pageSize=${pageSize}`,
         { method: "GET" }
       );
       const data = await response.json();
@@ -87,7 +95,8 @@ export default function GiveQuiz({ params: { id } }) {
         },
         body: JSON.stringify({ timeTaken: elapsedTime, ...answers }),
       });
-      const { totalMarks, totalQuestions, isBest, bestScore, bestTime } = await response.json();
+      const { totalMarks, totalQuestions, isBest, bestScore, bestTime } =
+        await response.json();
       if (response.ok) {
         alert(`You got: ${totalMarks}/${totalQuestions}`);
         localStorage.setItem("quizId", id);
@@ -108,9 +117,19 @@ export default function GiveQuiz({ params: { id } }) {
 
   const handleOptionSelection = (questionIndex, optionIndex) => {
     const newAnswers = [...answers];
+    questionIndex = (page - 1) * pageSize + questionIndex;
     newAnswers[questionIndex] = optionIndex;
     setAnswers(newAnswers);
   };
+
+  useEffect(() => {
+    const nonEmptyCount = answers.filter(
+      (answer) => answer !== undefined && answer !== ""
+    ).length;
+    console.log("answers :", answers);
+    console.log("non empty :", nonEmptyCount);
+    setTotalAnswered(nonEmptyCount);
+  }, [answers]);
 
   useEffect(() => {
     if (askedNext) {
@@ -163,6 +182,10 @@ export default function GiveQuiz({ params: { id } }) {
                     id={`option_${questionIndex}_${optionIndex}`}
                     name={`question_${questionIndex}`}
                     value={optionIndex}
+                    checked={
+                      optionIndex ===
+                      answers[(page - 1) * pageSize + questionIndex]
+                    }
                     onChange={() =>
                       handleOptionSelection(questionIndex, optionIndex)
                     }
@@ -177,7 +200,7 @@ export default function GiveQuiz({ params: { id } }) {
               ))}
             </div>
           ))}
-          <div className="mt-6">
+          <div className=" flex">
             <button
               disabled={page === 1}
               onClick={() => {
@@ -186,12 +209,12 @@ export default function GiveQuiz({ params: { id } }) {
               }}
               className={`px-2 py-2 rounded-md ${
                 page === 1 ? "bg-gray-400" : "bg-blue-500 hover:bg-blue-600"
-              } text-white mr-2`}
+              } text-white`}
             >
               Previous
             </button>
-            <p>
-              {page}/{Math.ceil(quizData.totalQuestions / 5)}
+            <p className="center m-2 ">
+              Page : {page}/{Math.ceil(quizData.totalQuestions / 5)}
             </p>
             <button
               disabled={!quizData.isMore}
@@ -203,11 +226,17 @@ export default function GiveQuiz({ params: { id } }) {
                 !quizData.isMore
                   ? "bg-gray-400"
                   : "bg-blue-500 hover:bg-blue-600"
-              } text-white mr-2`}
+              } text-white`}
             >
               Next
             </button>
           </div>
+
+          <QuizProgress
+            totalAnswered={totalAnswered}
+            totalQuestions={quizData.totalQuestions}
+          />
+
           <button
             onClick={(e) => handleSubmit(e)}
             className="px-4 py-2 rounded-md bg-green-700 hover:bg-blue-600 text-white mt-4"

@@ -40,11 +40,29 @@ export default function Results({ params: { id } }) {
 
   const getColorClass = (questionIndex, optionIndex) => {
     // Replace the following condition with your specific logic
-    if (optionIndex === quizData.questions[questionIndex].correctOption) {
-      return "text-green-900 font-bold";
-    } else if (quizId === id) {
-      if (optionIndex === quizAnswers[questionIndex])
-        return "text-red-900 font-bold";
+    if (quizId === id) {
+      if (
+        optionIndex === quizAnswers[questionIndex] &&
+        !(optionIndex === quizData.questions[questionIndex].correctOption)
+      ) {
+        // Wrong
+        return "text-black font-bold bg-red-100 rounded";
+      } else if (
+        optionIndex === quizAnswers[questionIndex] &&
+        optionIndex === quizData.questions[questionIndex].correctOption
+      ) {
+        // Right
+        return "text-black font-bold bg-blue-100 rounded";
+      } else if (
+        optionIndex === quizData.questions[questionIndex].correctOption
+      ) {
+        return "text-black font-bold bg-green-100 rounded";
+      }
+    } else if (
+      optionIndex === quizData.questions[questionIndex].correctOption
+    ) {
+      // Right
+      return "text-black font-bold bg-green-100 rounded";
     }
     return "";
   };
@@ -64,9 +82,12 @@ export default function Results({ params: { id } }) {
           {quizId === id ? (
             <div className="text-1xl mb-4 text-blue-800 font-bold">
               <h3>
-                Score :  <strong>{score}/{quizData.totalQuestions}</strong>
+                Score :{" "}
+                <strong>
+                  {score}/{quizData.totalQuestions}
+                </strong>
                 <br />
-                Time :  <strong>{time} seconds</strong>
+                Time : <strong>{time} seconds</strong>
               </h3>
               {isBest ? (
                 <p className="text-red-800 font-bold">
@@ -74,8 +95,9 @@ export default function Results({ params: { id } }) {
                 </p>
               ) : (
                 <p className="text-red-800">
-                  Best Score : <strong>{bestScore} </strong><br />
-                  Best Time :  <strong>{bestTime} seconds</strong>
+                  Best Score : <strong>{bestScore} </strong>
+                  <br />
+                  Best Time : <strong>{bestTime} seconds</strong>
                 </p>
               )}
             </div>
