@@ -38,7 +38,7 @@ export default function GiveQuiz({ params: { id } }) {
       );
       const data = await response.json();
       setQuizData(data);
-      console.log("got data : ", data);
+      console.log("      got Current page data : ", data);
       setLoading(false);
       if (data.isMore) {
         fetchDataNext();
@@ -60,7 +60,7 @@ export default function GiveQuiz({ params: { id } }) {
       );
       const data = await response.json();
       setPrevData(data);
-      // return data;
+      console.log("     got Previous page data : ", data);
     } catch (error) {
       console.error("Error fetching questions:", error);
     }
@@ -76,7 +76,7 @@ export default function GiveQuiz({ params: { id } }) {
       );
       const data = await response.json();
       setNextData(data);
-      // return data;
+      console.log("     got Next page data : ", data);
     } catch (error) {
       console.error("Error fetching questions:", error);
     }
@@ -85,9 +85,6 @@ export default function GiveQuiz({ params: { id } }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      console.log("Form submitted with elapsed time:", elapsedTime);
-      console.log("Sending answers : ", answers);
-
       const response = await fetch(`http://localhost:3000/api/quizzes/${id}`, {
         method: "POST",
         headers: {
@@ -126,8 +123,6 @@ export default function GiveQuiz({ params: { id } }) {
     const nonEmptyCount = answers.filter(
       (answer) => answer !== undefined && answer !== ""
     ).length;
-    console.log("answers :", answers);
-    console.log("non empty :", nonEmptyCount);
     setTotalAnswered(nonEmptyCount);
   }, [answers]);
 
